@@ -15,6 +15,8 @@ const app = {
     currentAccount: null,
     currentView: 'dashboard',
     currentFilter: 'all',
+    currentSort: 'overdue-desc',
+    branchContact: '9234567890',
     accounts: [],
     
     // Initialize App
@@ -160,6 +162,12 @@ const app = {
         if (this.currentFilter === 'npa') filtered = filtered.filter(a => a.irac >= 4);
         if (this.currentFilter === 'recoverable') filtered = filtered.filter(a => a.recoverable === true);
         if (this.currentFilter === 'missing-data') filtered = filtered.filter(a => !a.mobile || !a.linkedSBAccount);
+
+        if (this.currentSort === 'overdue-desc') {
+            filtered.sort((a, b) => (b.arrear || b.interestDue || 0) - (a.arrear || a.interestDue || 0));
+        } else if (this.currentSort === 'outstanding-desc') {
+            filtered.sort((a, b) => (b.outstanding || 0) - (a.outstanding || 0));
+        }
         
         const container = document.getElementById('accountsList');
         if (filtered.length === 0) {
@@ -169,6 +177,11 @@ const app = {
         }
     },
     
+    updateSort(sortBy) {
+        this.currentSort = sortBy;
+        this.loadAccountsList();
+    },
+
     filterAccounts(filter, evt) {
         this.currentFilter = filter;
         document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
@@ -221,7 +234,7 @@ const app = {
                     <div><strong>Overdue</strong> ${this.formatCurrency(overdueAmt || 0)}</div>
                 </div>
                 <div class="account-actions">
-                    <button class="btn-small btn-call" onclick="event.stopPropagation();app.callCustomer('${account.mobile}')">📞 Call</button>
+                    <button class="btn-small btn-call" onclick="event.stopPropagation();app.callCustomer('${account.mobile}','${account.accountNumber}')">📞 Call</button>
                     <button class="btn-small btn-notice" onclick="event.stopPropagation();app.showAccountDetail('${account.accountNumber}');setTimeout(()=>app.showNoticeModal(),100)">📄 Notice</button>
                     <button class="btn-small btn-remark" onclick="event.stopPropagation();app.showAccountDetail('${account.accountNumber}');setTimeout(()=>app.showRemarkModal(),100)">➕ Remark</button>
                 </div>
@@ -292,12 +305,18 @@ const app = {
     
     async loadSettings() {
         const contact = await db.settings.get('branchContact');
-        if (contact) document.getElementById('branchContact').value = contact.value;
+        const stored = contact ? contact.value : localStorage.getItem('branchContact');
+        if (stored) {
+            this.branchContact = stored;
+            document.getElementById('branchContact').value = stored;
+        }
     },
     
     async saveSettings() {
-        const contact = document.getElementById('branchContact').value;
-        await db.settings.put({key: 'branchContact', value: contact});
+        const contact = document.getElementById('branchContact').value.trim();
+        this.branchContact = contact || '9234567890';
+        await db.settings.put({key: 'branchContact', value: this.branchContact});
+        localStorage.setItem('branchContact', this.branchContact);
         alert('Settings saved!');
     },
     
@@ -507,15 +526,40 @@ const app = {
     },
     
     // COMMUNICATION
-    callCustomer(mobile) {
+    async callCustomer(mobile, accountNumber = null) {
         if (!mobile || mobile === 'Not available') {
             alert('Mobile number not available');
             return;
         }
+
+        const accountId = accountNumber || (this.currentAccount && this.currentAccount.accountNumber);
+        if (accountId && this.currentUser) {
+            await db.timeline.add({
+                accountNumber: accountId,
+                timestamp: new Date().toISOString(),
+                userName: this.currentUser.name,
+                actionType: 'Call',
+                remark: `Called on ${mobile}`
+            });
+        }
+
         window.location.href = `tel:+91${mobile}`;
+    },
+
+    getRecommendedTemplate(account) {
+        if (!account) return 'friendly';
+        if (account.recoverable) return 'deposit';
+        if (account.loanType === 'CCOD') return 'ccod';
+        if (account.irac >= 3) return 'urgent';
+        if (account.irac === 2) return 'overdue';
+        return 'friendly';
     },
     
     showNoticeModal() {
+        const templateSelect = document.getElementById('noticeTemplate');
+        if (this.currentAccount && templateSelect) {
+            templateSelect.value = this.getRecommendedTemplate(this.currentAccount);
+        }
         this.updateNoticePreview();
         this.showModal('noticeModal');
     },
@@ -523,7 +567,7 @@ const app = {
     updateNoticePreview() {
         const template = document.getElementById('noticeTemplate').value;
         const a = this.currentAccount;
-        const branchContact = localStorage.getItem('branchContact') || '9234567890';
+        const branchContact = this.branchContact || localStorage.getItem('branchContact') || '9234567890';
         
         let text = '';
         if (template === 'friendly') {
