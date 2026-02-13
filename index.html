@@ -132,6 +132,14 @@
                         <button class="filter-chip" onclick="app.filterAccounts('recoverable', event)">Recoverable</button>
                         <button class="filter-chip" onclick="app.filterAccounts('missing-data', event)">Missing Data</button>
                     </div>
+                    <div class="setting-item">
+                        <label>Sort Accounts</label>
+                        <select id="sortAccounts" class="input" onchange="app.updateSort(this.value)">
+                            <option value="overdue-desc">Overdue Amount (High to Low)</option>
+                            <option value="outstanding-desc">Outstanding (High to Low)</option>
+                            <option value="default">Default</option>
+                        </select>
+                    </div>
                     <input type="search" id="searchInput" class="input" placeholder="Search by account, customer, mobile..." oninput="app.searchAccounts()">
                     <div id="accountsList" class="account-list"></div>
                 </div>
@@ -330,7 +338,7 @@
                 <div class="account-detail-section">
                     <h4>Quick Actions</h4>
                     <div class="action-buttons">
-                        <button onclick="app.callCustomer()" class="btn btn-success">📞 Call Customer</button>
+                        <button onclick="app.callCustomer(app.currentAccount ? app.currentAccount.mobile : '', app.currentAccount ? app.currentAccount.accountNumber : null)" class="btn btn-success">📞 Call Customer</button>
                         <button onclick="app.showNoticeModal()" class="btn btn-primary">📄 Generate Notice</button>
                         <button onclick="app.showRemarkModal()" class="btn btn-secondary">➕ Add Remark</button>
                     </div>
