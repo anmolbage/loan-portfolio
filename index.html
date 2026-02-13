@@ -125,12 +125,12 @@
             <div id="accountsView" class="view">
                 <div class="section">
                     <div class="filter-bar">
-                        <button class="filter-chip active" onclick="app.filterAccounts('all')">All</button>
-                        <button class="filter-chip" onclick="app.filterAccounts('high-risk')">High Risk</button>
-                        <button class="filter-chip" onclick="app.filterAccounts('sma2')">SMA-2</button>
-                        <button class="filter-chip" onclick="app.filterAccounts('npa')">NPA</button>
-                        <button class="filter-chip" onclick="app.filterAccounts('recoverable')">Recoverable</button>
-                        <button class="filter-chip" onclick="app.filterAccounts('missing-data')">Missing Data</button>
+                        <button class="filter-chip active" onclick="app.filterAccounts('all', event)">All</button>
+                        <button class="filter-chip" onclick="app.filterAccounts('high-risk', event)">High Risk</button>
+                        <button class="filter-chip" onclick="app.filterAccounts('sma2', event)">SMA-2</button>
+                        <button class="filter-chip" onclick="app.filterAccounts('npa', event)">NPA</button>
+                        <button class="filter-chip" onclick="app.filterAccounts('recoverable', event)">Recoverable</button>
+                        <button class="filter-chip" onclick="app.filterAccounts('missing-data', event)">Missing Data</button>
                     </div>
                     <input type="search" id="searchInput" class="input" placeholder="Search by account, customer, mobile..." oninput="app.searchAccounts()">
                     <div id="accountsList" class="account-list"></div>

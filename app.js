@@ -79,9 +79,13 @@ const app = {
         this.currentView = viewName;
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(viewName + 'View').classList.add('active');
+
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        event.target.closest('.nav-item').classList.add('active');
-        
+        const navItems = document.querySelectorAll('.nav-item');
+        const viewOrder = ['dashboard', 'accounts', 'import', 'settings'];
+        const idx = viewOrder.indexOf(viewName);
+        if (idx >= 0 && navItems[idx]) navItems[idx].classList.add('active');
+
         if (viewName === 'dashboard') this.updateDashboard();
         if (viewName === 'accounts') this.loadAccountsList();
     },
@@ -165,10 +169,11 @@ const app = {
         }
     },
     
-    filterAccounts(filter) {
+    filterAccounts(filter, evt) {
         this.currentFilter = filter;
         document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-        event.target.classList.add('active');
+        const target = evt ? evt.target : (event ? event.target : null);
+        if (target) target.classList.add('active');
         this.loadAccountsList();
     },
     
@@ -296,6 +301,10 @@ const app = {
         alert('Settings saved!');
     },
     
+    showImportModal() {
+        this.switchView('import');
+    },
+
     registerServiceWorker() {
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(e => console.log('SW registration failed'));
@@ -348,6 +357,7 @@ const app = {
                 acc.riskLevel = this.calculateRisk(acc);
                 if (acc.cif && depositsByCIF[acc.cif]) {
                     acc.totalDepositBalance = depositsByCIF[acc.cif].total;
+                    acc.linkedSBAccount = depositsByCIF[acc.cif].sbAccount || 'Linked';
                     acc.linkedSBBalance = depositsByCIF[acc.cif].sb;
                     const overdueAmt = acc.loanType === 'TL' ? acc.arrear : acc.interestDue;
                     acc.recoverable = overdueAmt > 0 && acc.totalDepositBalance >= overdueAmt * 0.5;
@@ -451,9 +461,13 @@ const app = {
                 const accType = line.substring(23, 28).trim();
                 
                 if (cif && balance > 0) {
-                    if (!depositsByCIF[cif]) depositsByCIF[cif] = {total: 0, sb: 0};
+                    if (!depositsByCIF[cif]) depositsByCIF[cif] = {total: 0, sb: 0, sbAccount: ''};
                     depositsByCIF[cif].total += balance;
-                    if (accType.includes('SB')) depositsByCIF[cif].sb += balance;
+                    if (accType.includes('SB')) {
+                        depositsByCIF[cif].sb += balance;
+                        const sbAccNum = line.substring(7, 22).trim().replace(/-/g, '');
+                        if (sbAccNum) depositsByCIF[cif].sbAccount = sbAccNum;
+                    }
                 }
             }
         }
@@ -592,6 +606,40 @@ const app = {
         a.click();
     },
     
+    async importBackup() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                if (!data.accounts || !Array.isArray(data.accounts)) {
+                    alert('Invalid backup file: missing accounts data');
+                    return;
+                }
+                if (!confirm(`Restore ${data.accounts.length} accounts and ${(data.timeline || []).length} timeline entries?\nThis will overwrite existing data.`)) {
+                    return;
+                }
+                await db.accounts.clear();
+                await db.timeline.clear();
+                await db.accounts.bulkPut(data.accounts);
+                if (data.timeline && data.timeline.length > 0) {
+                    await db.timeline.bulkPut(data.timeline);
+                }
+                await this.loadData();
+                this.updateDashboard();
+                alert('Backup restored successfully!');
+            } catch (error) {
+                alert('Restore failed: ' + error.message);
+                console.error(error);
+            }
+        };
+        input.click();
+    },
+
     async clearAllData() {
         if (confirm('⚠️ This will delete ALL data! Are you sure?')) {
             if (confirm('Final confirmation - this cannot be undone!')) {
