@@ -394,6 +394,24 @@ const app = {
             console.error(error);
         }
     },
+
+    extractAccountNumber(line, start, end) {
+        const windowStart = Math.max(0, start - 1);
+        const windowEnd = Math.min(line.length, end + 1);
+        const candidateSegment = line.substring(windowStart, windowEnd);
+        const candidates = candidateSegment.match(/\d[\d-]{8,}/g) || [];
+
+        if (candidates.length > 0) {
+            const best = candidates.sort((a, b) => {
+                const aLen = a.replace(/\D/g, '').length;
+                const bLen = b.replace(/\D/g, '').length;
+                return bLen - aLen;
+            })[0];
+            return best.replace(/\D/g, '');
+        }
+
+        return line.substring(start, end).replace(/\D/g, '');
+    },
     
     async parseTLFile(file) {
         const text = await file.text();
@@ -403,10 +421,10 @@ const app = {
         for (let line of lines) {
             if (line.length < 100 || line.includes('REPORT ID') || line.includes('---')) continue;
             if (line.trim().startsWith('84') || line.trim().startsWith('22')) {
-                const accountNumber = line.substring(7, 20).trim();
+                const accountNumber = this.extractAccountNumber(line, 7, 20);
                 if (accountNumber && accountNumber.length >= 10) {
                     accounts.push({
-                        accountNumber: accountNumber.replace(/-/g, ''),
+                        accountNumber: accountNumber,
                         loanType: 'TL',
                         product: line.substring(21, 49).trim(),
                         customerName: line.substring(50, 85).trim(),
@@ -429,11 +447,11 @@ const app = {
         for (let line of lines) {
             if (line.length < 100 || line.includes('REPORT ID') || line.includes('---')) continue;
             if (line.trim().startsWith('84') || line.trim().startsWith('22')) {
-                const accountNumber = line.substring(9, 22).trim();
+                const accountNumber = this.extractAccountNumber(line, 9, 22);
                 if (accountNumber && accountNumber.length >= 10) {
                     const outStr = line.substring(150, 170).replace(/,/g, '').replace(/-/g, '').trim();
                     accounts.push({
-                        accountNumber: accountNumber.replace(/-/g, ''),
+                        accountNumber: accountNumber,
                         loanType: 'CCOD',
                         product: line.substring(23, 53).trim(),
                         customerName: line.substring(54, 84).trim(),
@@ -465,7 +483,7 @@ const app = {
                     depositsByCIF[cif].total += balance;
                     if (accType.includes('SB')) {
                         depositsByCIF[cif].sb += balance;
-                        const sbAccNum = line.substring(7, 22).trim().replace(/-/g, '');
+                        const sbAccNum = this.extractAccountNumber(line, 7, 22);
                         if (sbAccNum) depositsByCIF[cif].sbAccount = sbAccNum;
                     }
                 }
