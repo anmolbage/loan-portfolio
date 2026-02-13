@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Loan Portfolio Manager - Branch 443</title>
+    <meta name="description" content="Complete Loan Portfolio Management System">
+    <meta name="theme-color" content="#1e40af">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="screen active">
+        <div class="login-container">
+            <div class="login-header">
+                <h1>🏦 JRGB Loan Portfolio</h1>
+                <p>Branch 443 - Ramgarh Cantt</p>
+            </div>
+            <div class="login-form">
+                <select id="loginUser" class="input">
+                    <option value="">Select User</option>
+                    <option value="BM">Branch Manager</option>
+                    <option value="DBM">Deputy BM</option>
+                    <option value="Assistant">Assistant</option>
+                    <option value="Attendant">Attendant</option>
+                </select>
+                <input type="password" id="loginPin" class="input" placeholder="Enter 4-digit PIN" maxlength="4" pattern="[0-9]{4}">
+                <button onclick="app.login()" class="btn btn-primary">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Screen -->
+    <div id="appScreen" class="screen">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1>Loan Portfolio</h1>
+                    <small id="userName">Branch Manager</small>
+                </div>
+                <div class="header-right">
+                    <button onclick="app.showImportModal()" class="btn-icon" title="Import Data">📥</button>
+                    <button onclick="app.logout()" class="btn-icon" title="Logout">🚪</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard View -->
+            <div id="dashboardView" class="view active">
+                <div class="section">
+                    <h2 class="section-title">Portfolio Overview</h2>
+                    <div class="stat-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Accounts</div>
+                            <div class="stat-value" id="totalAccounts">0</div>
+                            <div class="stat-sub">TL: <span id="tlCount">0</span> | CC/OD: <span id="ccodCount">0</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Outstanding</div>
+                            <div class="stat-value" id="totalOutstanding">₹0</div>
+                            <div class="stat-sub">Last updated: <span id="lastUpdate">Never</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Arrear (TL)</div>
+                            <div class="stat-value" id="totalArrear">₹0</div>
+                            <div class="stat-sub">Interest Due: <span id="totalInterest">₹0</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">High Risk</div>
+                            <div class="stat-value" id="highRiskCount">0</div>
+                            <div class="stat-sub">Needs attention</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">Asset Quality</h2>
+                    <div class="stat-grid stat-grid-4">
+                        <div class="stat-card stat-green">
+                            <div class="stat-label">SMA-0 (IRAC 1)</div>
+                            <div class="stat-value" id="sma0Count">0</div>
+                        </div>
+                        <div class="stat-card stat-yellow">
+                            <div class="stat-label">SMA-1 (IRAC 2)</div>
+                            <div class="stat-value" id="sma1Count">0</div>
+                        </div>
+                        <div class="stat-card stat-orange">
+                            <div class="stat-label">SMA-2 (IRAC 3)</div>
+                            <div class="stat-value" id="sma2Count">0</div>
+                        </div>
+                        <div class="stat-card stat-red">
+                            <div class="stat-label">NPA (IRAC 4+)</div>
+                            <div class="stat-value" id="npaCount">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">Recovery Intelligence</h2>
+                    <div class="stat-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Recoverable from Deposits</div>
+                            <div class="stat-value" id="recoverableCount">0</div>
+                            <div class="stat-sub">Amount: <span id="recoverableAmount">₹0</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Missing Base Data</div>
+                            <div class="stat-value" id="missingDataCount">0</div>
+                            <div class="stat-sub">Mobile/SB Account</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">Today's Followups</h2>
+                    <div id="todayFollowups" class="account-list"></div>
+                </div>
+            </div>
+
+            <!-- Accounts View -->
+            <div id="accountsView" class="view">
+                <div class="section">
+                    <div class="filter-bar">
+                        <button class="filter-chip active" onclick="app.filterAccounts('all')">All</button>
+                        <button class="filter-chip" onclick="app.filterAccounts('high-risk')">High Risk</button>
+                        <button class="filter-chip" onclick="app.filterAccounts('sma2')">SMA-2</button>
+                        <button class="filter-chip" onclick="app.filterAccounts('npa')">NPA</button>
+                        <button class="filter-chip" onclick="app.filterAccounts('recoverable')">Recoverable</button>
+                        <button class="filter-chip" onclick="app.filterAccounts('missing-data')">Missing Data</button>
+                    </div>
+                    <input type="search" id="searchInput" class="input" placeholder="Search by account, customer, mobile..." oninput="app.searchAccounts()">
+                    <div id="accountsList" class="account-list"></div>
+                </div>
+            </div>
+
+            <!-- Import View -->
+            <div id="importView" class="view">
+                <div class="section">
+                    <h2 class="section-title">Import Month Data</h2>
+                    <div class="alert alert-info">
+                        Upload your CBS reports (TL Balance, CC/OD Balance, Deposits). The app will merge data intelligently.
+                    </div>
+                    
+                    <div class="import-section">
+                        <label class="import-label">Term Loan Balance File</label>
+                        <input type="file" id="tlFile" accept=".txt,.csv" class="input">
+                    </div>
+                    
+                    <div class="import-section">
+                        <label class="import-label">CC/OD Balance File</label>
+                        <input type="file" id="ccodFile" accept=".txt,.csv" class="input">
+                    </div>
+                    
+                    <div class="import-section">
+                        <label class="import-label">Deposits Balance File</label>
+                        <input type="file" id="depositFile" accept=".txt,.csv" class="input">
+                    </div>
+                    
+                    <button onclick="app.processImport()" class="btn btn-primary">Process Import</button>
+                    
+                    <div id="importProgress" class="import-progress" style="display:none;">
+                        <div class="progress-bar">
+                            <div id="progressBar" class="progress-fill"></div>
+                        </div>
+                        <div id="progressText" class="progress-text">Processing...</div>
+                    </div>
+                    
+                    <div id="importResult" class="import-result" style="display:none;"></div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">Backup & Restore</h2>
+                    <button onclick="app.exportData()" class="btn btn-secondary">Export Backup (JSON)</button>
+                    <button onclick="app.importBackup()" class="btn btn-secondary">Restore from Backup</button>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="settingsView" class="view">
+                <div class="section">
+                    <h2 class="section-title">App Settings</h2>
+                    
+                    <div class="setting-item">
+                        <label>Branch Name</label>
+                        <input type="text" value="RAMGARH CANTT" class="input" disabled>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label>Branch Code</label>
+                        <input type="text" value="443" class="input" disabled>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label>Branch Contact</label>
+                        <input type="text" id="branchContact" class="input" placeholder="Enter branch mobile">
+                    </div>
+                    
+                    <button onclick="app.saveSettings()" class="btn btn-primary">Save Settings</button>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">Notice Templates</h2>
+                    <div class="template-list">
+                        <div class="template-item">
+                            <strong>Friendly Reminder</strong>
+                            <p>For IRAC 1, &lt;30 days overdue</p>
+                        </div>
+                        <div class="template-item">
+                            <strong>Overdue Alert</strong>
+                            <p>For IRAC 2, 30-60 days</p>
+                        </div>
+                        <div class="template-item">
+                            <strong>Urgent Notice</strong>
+                            <p>For IRAC 3, 60-90 days</p>
+                        </div>
+                        <div class="template-item">
+                            <strong>CC/OD Interest Due</strong>
+                            <p>For CC/OD accounts with interest due</p>
+                        </div>
+                        <div class="template-item">
+                            <strong>Deposit Recovery Notice</strong>
+                            <p>For accounts with sufficient deposit balance</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">Data Management</h2>
+                    <button onclick="app.clearAllData()" class="btn btn-danger">Clear All Data</button>
+                    <p class="text-small text-muted">Warning: This will delete all accounts and timeline data!</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" onclick="app.switchView('dashboard')">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </button>
+            <button class="nav-item" onclick="app.switchView('accounts')">
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">Accounts</span>
+            </button>
+            <button class="nav-item" onclick="app.switchView('import')">
+                <span class="nav-icon">📥</span>
+                <span class="nav-label">Import</span>
+            </button>
+            <button class="nav-item" onclick="app.switchView('settings')">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Settings</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Account Detail Modal -->
+    <div id="accountModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalAccountName">Account Details</h3>
+                <button onclick="app.closeModal('accountModal')" class="btn-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="account-detail-section">
+                    <h4>Basic Information</h4>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Account Number</label>
+                            <span id="detailAccountNumber"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Product</label>
+                            <span id="detailProduct"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Mobile</label>
+                            <span id="detailMobile"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>IRAC Status</label>
+                            <span id="detailIRAC"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="account-detail-section">
+                    <h4>Financial Summary</h4>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Outstanding</label>
+                            <span id="detailOutstanding"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Arrear/Interest Due</label>
+                            <span id="detailArrear"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>EMI (TL only)</label>
+                            <span id="detailEMI"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Risk Level</label>
+                            <span id="detailRisk"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="account-detail-section">
+                    <h4>Deposit Linkage</h4>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>SB Account</label>
+                            <span id="detailSB"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Deposit Balance</label>
+                            <span id="detailDepositBalance"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Recoverable</label>
+                            <span id="detailRecoverable"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="account-detail-section">
+                    <h4>Quick Actions</h4>
+                    <div class="action-buttons">
+                        <button onclick="app.callCustomer()" class="btn btn-success">📞 Call Customer</button>
+                        <button onclick="app.showNoticeModal()" class="btn btn-primary">📄 Generate Notice</button>
+                        <button onclick="app.showRemarkModal()" class="btn btn-secondary">➕ Add Remark</button>
+                    </div>
+                </div>
+
+                <div class="account-detail-section">
+                    <h4>Timeline</h4>
+                    <div id="accountTimeline" class="timeline"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notice Generation Modal -->
+    <div id="noticeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Generate Notice</h3>
+                <button onclick="app.closeModal('noticeModal')" class="btn-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <label>Select Template</label>
+                <select id="noticeTemplate" class="input" onchange="app.updateNoticePreview()">
+                    <option value="friendly">Friendly Reminder (IRAC 1, <30 days)</option>
+                    <option value="overdue">Overdue Alert (IRAC 2, 30-60 days)</option>
+                    <option value="urgent">Urgent Notice (IRAC 3, 60-90 days)</option>
+                    <option value="ccod">CC/OD Interest Due</option>
+                    <option value="deposit">Deposit Recovery Notice</option>
+                </select>
+                
+                <label>Notice Text (Editable)</label>
+                <textarea id="noticeText" class="input" rows="10"></textarea>
+                
+                <div class="action-buttons">
+                    <button onclick="app.copyNotice()" class="btn btn-primary">📋 Copy to Clipboard</button>
+                    <button onclick="app.sendWhatsApp()" class="btn btn-success">💬 Open WhatsApp</button>
+                </div>
+                
+                <div class="form-check">
+                    <input type="checkbox" id="logNotice">
+                    <label for="logNotice">Log this notice in timeline</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Remark Modal -->
+    <div id="remarkModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Remark / Followup</h3>
+                <button onclick="app.closeModal('remarkModal')" class="btn-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <label>Action Type</label>
+                <select id="remarkType" class="input">
+                    <option value="Call">Phone Call</option>
+                    <option value="WhatsApp">WhatsApp Message</option>
+                    <option value="Visit">Field Visit</option>
+                    <option value="Notice">Notice Sent</option>
+                    <option value="Promise">Promise to Pay</option>
+                    <option value="Payment">Payment Received</option>
+                    <option value="Remark">General Remark</option>
+                </select>
+                
+                <label>Remark</label>
+                <textarea id="remarkText" class="input" rows="4" placeholder="Enter your remark..."></textarea>
+                
+                <label>Next Followup Date</label>
+                <input type="date" id="nextFollowup" class="input">
+                
+                <button onclick="app.saveRemark()" class="btn btn-primary">Save Remark</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
